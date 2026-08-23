@@ -57,11 +57,28 @@ public class Account implements IAccount {
     }
     @Override
     public BigDecimal withdraw(BigDecimal requestedAmount) {
-        return this.balance.subtract(requestedAmount); }
-    @Override
-    public BigDecimal deposit(BigDecimal amount_to_deposit) {
-        return this.balance.add(amount_to_deposit);
+        /* Bug#1 : Original code had balance - amount but never assigned the result to this.balance.
+         * Bug#2: There was no overdraft protection in the original code, no check against max_overdrawn, ...
+         *  therefore the balance could be negative.If the new balance would be less than -max_overdrawn, then deny...
+         *  the withdraw-amount and return the unchanged balance.
+         */
+        BigDecimal newBalance = this.balance.subtract(requestedAmount);
+        BigDecimal minAllowed = this.max_overdrawn.multiply(new BigDecimal(-1));
+        if (newBalance.compareTo(minAllowed) < 0) {
+            // Withdrawal not permitted — would exceed overdraft limit
+            return this.balance;
+        }
+        this.balance = newBalance;
+        return this.balance;
     }
+    @Override
+
+    public BigDecimal deposit(BigDecimal amount_to_deposit) {
+      //  Bug : Original code had balance - amount but never assigned the result to this.balance.
+         this.balance=this.balance.add(amount_to_deposit);
+        return this.balance;
+    }
+
     @Override
     public void convertToCurrency(String currencyCode, double rate) {
         this.currency = currencyCode;
